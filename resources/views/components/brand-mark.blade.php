@@ -1,0 +1,1 @@
+<img src="{{ asset('eventflow-mark.svg') }}" alt="" aria-hidden="true" {{ $attributes->merge(['class' => 'brand-mark']) }}>
