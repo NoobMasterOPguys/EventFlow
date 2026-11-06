@@ -2,8 +2,12 @@
 
 namespace App\Http\Controllers;
 
+use App\Models\AuditLog;
 use App\Models\Event;
+use App\Models\EventCategory;
 use App\Models\User;
+use App\Notifications\EventUpdate;
+use Carbon\CarbonImmutable;
 use Illuminate\Database\Eloquent\Builder;
 use Illuminate\Http\RedirectResponse;
 use Illuminate\Http\Request;
@@ -11,6 +15,7 @@ use Illuminate\Support\Facades\DB;
 use Illuminate\Support\Facades\Gate;
 use Illuminate\Validation\Rule;
 use Illuminate\Validation\Rules\In;
+use Illuminate\Validation\ValidationException;
 use Illuminate\View\View;
 
 class EventController extends Controller
@@ -19,9 +24,24 @@ class EventController extends Controller
 
     public function index(Request $request): View
     {
+        $categoryOptions = EventCategory::query()
+            ->where('is_active', true)
+            ->orderBy('name')
+            ->pluck('name', 'name')
+            ->all();
+        $existingCategories = $request->user()->events()
+            ->whereNotNull('category')
+            ->distinct()
+            ->orderBy('category')
+            ->pluck('category');
+
+        foreach ($existingCategories as $category) {
+            $categoryOptions[$category] ??= $category;
+        }
+
         $validated = $request->validate([
             'search' => ['nullable', 'string', 'max:100'],
-            'category' => ['nullable', 'string', 'max:100'],
+            'category' => ['nullable', Rule::in(array_keys($categoryOptions))],
             'status' => ['nullable', Rule::in(self::STATUSES)],
             'sort' => ['nullable', Rule::in(['upcoming', 'newest', 'title'])],
         ]);
@@ -51,23 +71,23 @@ class EventController extends Controller
 
         return view('events.index', [
             'events' => $events->paginate(9)->withQueryString(),
-            'categories' => $request->user()->events()
-                ->whereNotNull('category')
-                ->distinct()
-                ->orderBy('category')
-                ->pluck('category'),
+            'categories' => $categoryOptions,
             'filters' => $validated,
         ]);
     }
 
     public function create(): View
     {
-        return view('events.create');
+        return view('events.create', [
+            'categories' => EventCategory::query()->where('is_active', true)->orderBy('name')->pluck('name', 'name')->all(),
+            'minimumScheduleAt' => now()->addMinute()->startOfMinute()->format('Y-m-d\TH:i'),
+        ]);
     }
 
     public function store(Request $request): RedirectResponse
     {
         $validated = $request->validate($this->eventRules());
+        $this->validateFutureSchedule($validated);
 
         $event = DB::transaction(function () use ($request, $validated): Event {
             $event = $request->user()->createdEvents()->create($validated);
@@ -75,6 +95,9 @@ class EventController extends Controller
                 'role' => 'leader',
                 'joined_at' => now(),
             ]);
+            AuditLog::record($request->user(), 'event.created', $event, [
+                'title' => $event->title,
+            ], $request->ip());
 
             return $event;
         });
@@ -152,15 +175,41 @@ class EventController extends Controller
     {
         $event = $this->accessibleEvent($request, $event);
         Gate::authorize('update', $event);
+        $categories = EventCategory::query()->where('is_active', true)->orderBy('name')->pluck('name', 'name')->all();
 
-        return view('events.edit', ['event' => $event]);
+        if ($event->category !== null && ! array_key_exists($event->category, $categories)) {
+            $categories[$event->category] = $event->category;
+        }
+        $minimumScheduleAt = now()->addMinute()->startOfMinute();
+
+        return view('events.edit', [
+            'event' => $event,
+            'categories' => $categories,
+            'minimumScheduleAt' => $event->start_at->greaterThanOrEqualTo($minimumScheduleAt)
+                && $event->end_at->greaterThanOrEqualTo($minimumScheduleAt)
+                ? $minimumScheduleAt->format('Y-m-d\TH:i')
+                : null,
+        ]);
     }
 
     public function update(Request $request, Event $event): RedirectResponse
     {
         $event = $this->accessibleEvent($request, $event);
         Gate::authorize('update', $event);
-        $event->fill($request->validate($this->eventRules()))->save();
+        $validated = $request->validate($this->eventRules($event));
+
+        $this->validateFutureSchedule($validated, $event);
+        $this->removeUnchangedSchedule($validated, $event);
+
+        $before = $event->only(['title', 'category', 'location', 'start_at', 'end_at', 'status']);
+        $event->fill($validated)->save();
+        AuditLog::record($request->user(), 'event.updated', $event, [
+            'before' => $before,
+            'after' => $event->only(['title', 'category', 'location', 'start_at', 'end_at', 'status']),
+        ], $request->ip());
+        if ($event->wasChanged()) {
+            $this->notifyMembers($event, $request->user(), 'updated');
+        }
 
         return redirect()->route('events.show', $event)->with('success', 'Event details updated.');
     }
@@ -172,9 +221,33 @@ class EventController extends Controller
         $validated = $request->validate([
             'status' => ['required', Rule::in(self::STATUSES)],
         ]);
+        $previousStatus = $event->status;
         $event->update($validated);
+        AuditLog::record($request->user(), 'event.status_changed', $event, [
+            'from' => $previousStatus,
+            'to' => $event->status,
+        ], $request->ip());
+        if ($event->wasChanged('status')) {
+            $this->notifyMembers($event, $request->user(), 'status_changed');
+        }
 
         return redirect()->route('events.show', $event)->with('success', 'Event status updated.');
+    }
+
+    public function destroy(Request $request, Event $event): RedirectResponse
+    {
+        $event = $this->accessibleEvent($request, $event);
+        Gate::authorize('update', $event);
+
+        DB::transaction(function () use ($event, $request): void {
+            $event = Event::query()->lockForUpdate()->findOrFail($event->getKey());
+            $event->delete();
+            AuditLog::record($request->user(), 'event.archived', $event, [
+                'title' => $event->title,
+            ], $request->ip());
+        });
+
+        return redirect()->route('events.index')->with('success', 'Event archived. Its history is preserved and an administrator can restore it.');
     }
 
     public function addMember(Request $request, Event $event): RedirectResponse
@@ -196,6 +269,13 @@ class EventController extends Controller
             'role' => 'member',
             'joined_at' => now(),
         ]);
+        $newMember = User::query()->findOrFail($validated['user_id']);
+        if ($newMember->receivesNotificationFor('event_updates')) {
+            $newMember->notify(new EventUpdate($event, 'member_added'));
+        }
+        AuditLog::record($request->user(), 'event.member_added', $event, [
+            'user_id' => $validated['user_id'],
+        ], $request->ip());
 
         return back()->with('success', 'Member added to the event.');
     }
@@ -208,9 +288,12 @@ class EventController extends Controller
 
         abort_unless($membership->pivot->role === 'member', 403);
 
-        DB::transaction(function () use ($event, $member): void {
+        DB::transaction(function () use ($event, $member, $request): void {
             $event->tasks()->withTrashed()->where('assigned_to', $member->id)->update(['assigned_to' => null]);
             $event->members()->detach($member->id);
+            AuditLog::record($request->user(), 'event.member_removed', $event, [
+                'user_id' => $member->getKey(),
+            ], $request->ip());
         });
 
         return back()->with('success', 'Member removed. Their task history is preserved and assigned tasks are now unassigned.');
@@ -219,21 +302,76 @@ class EventController extends Controller
     /**
      * @return array<string, array<int, string|In>>
      */
-    private function eventRules(): array
+    private function eventRules(?Event $event = null): array
     {
+        $categoryOptions = EventCategory::query()->where('is_active', true)->pluck('name')->all();
+
+        if ($event?->category !== null && ! in_array($event->category, $categoryOptions, true)) {
+            $categoryOptions[] = $event->category;
+        }
+
         return [
             'title' => ['required', 'string', 'max:150'],
             'description' => ['nullable', 'string', 'max:5000'],
-            'category' => ['nullable', 'string', 'max:100'],
+            'category' => ['nullable', 'string', 'max:100', Rule::in($categoryOptions)],
             'location' => ['required', 'string', 'max:255'],
-            'start_at' => ['required', 'date'],
-            'end_at' => ['required', 'date', 'after:start_at'],
+            'start_at' => ['required', 'date_format:Y-m-d\TH:i'],
+            'end_at' => ['required', 'date_format:Y-m-d\TH:i', 'after:start_at'],
             'status' => ['required', Rule::in(self::STATUSES)],
         ];
+    }
+
+    /**
+     * @param  array<string, mixed>  $validated
+     */
+    private function validateFutureSchedule(array $validated, ?Event $event = null): void
+    {
+        $errors = [];
+
+        foreach (['start_at', 'end_at'] as $field) {
+            if (
+                $event !== null
+                && $event->{$field}->format('Y-m-d\TH:i') === $validated[$field]
+            ) {
+                continue;
+            }
+
+            if (CarbonImmutable::parse($validated[$field], config('app.timezone'))->lessThanOrEqualTo(now())) {
+                $errors[$field] = 'Your event schedule must be later than the current time. Please select a future date and time.';
+            }
+        }
+
+        if ($errors !== []) {
+            throw ValidationException::withMessages($errors);
+        }
+    }
+
+    /**
+     * @param  array<string, mixed>  $validated
+     */
+    private function removeUnchangedSchedule(array &$validated, Event $event): void
+    {
+        foreach (['start_at', 'end_at'] as $field) {
+            if ($event->{$field}->format('Y-m-d\TH:i') === $validated[$field]) {
+                unset($validated[$field]);
+            }
+        }
     }
 
     private function accessibleEvent(Request $request, Event $event): Event
     {
         return $request->user()->events()->whereKey($event->getKey())->firstOrFail();
+    }
+
+    private function notifyMembers(Event $event, User $actor, string $kind): void
+    {
+        $event->members()
+            ->where('users.id', '!=', $actor->getKey())
+            ->get()
+            ->each(function (User $member) use ($event, $kind): void {
+                if ($member->receivesNotificationFor('event_updates')) {
+                    $member->notify(new EventUpdate($event, $kind));
+                }
+            });
     }
 }

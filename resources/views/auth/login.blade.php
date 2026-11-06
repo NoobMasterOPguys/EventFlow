@@ -87,7 +87,8 @@
                     </button>
                 </form>
                 <div class="login-note"><span class="note-lock" aria-hidden="true">▣</span> Your school workspace is private and secure.</div>
-                <div class="login-footer">New to EventFlow? <a href="{{ route('register') }}">Create an account</a></div>
+                <div class="login-footer">Don't have an account yet? <a href="{{ route('register') }}">Create an account</a></div>
+                @include('partials.legal-links')
             </div>
         </section>
     </main>

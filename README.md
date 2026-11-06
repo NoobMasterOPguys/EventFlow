@@ -1,58 +1,81 @@
-<p align="center"><a href="https://laravel.com" target="_blank"><img src="https://raw.githubusercontent.com/laravel/art/master/logo-lockup/5%20SVG/2%20CMYK/1%20Full%20Color/laravel-logolockup-cmyk-red.svg" width="400" alt="Laravel Logo"></a></p>
+# EventFlow
 
-<p align="center">
-<a href="https://github.com/laravel/framework/actions"><img src="https://github.com/laravel/framework/workflows/tests/badge.svg" alt="Build Status"></a>
-<a href="https://packagist.org/packages/laravel/framework"><img src="https://img.shields.io/packagist/dt/laravel/framework" alt="Total Downloads"></a>
-<a href="https://packagist.org/packages/laravel/framework"><img src="https://img.shields.io/packagist/v/laravel/framework" alt="Latest Stable Version"></a>
-<a href="https://packagist.org/packages/laravel/framework"><img src="https://img.shields.io/packagist/l/laravel/framework" alt="License"></a>
-</p>
+EventFlow is a Laravel application for coordinating school and community events. Members can manage event schedules, assign and track tasks, view a personal calendar, receive in-app notifications, and optionally export events to Google Calendar. Administrators have a separate platform area for managing users, events, tasks, categories, and audit history.
 
-## About Laravel
+## Requirements
 
-Laravel is a web application framework with expressive, elegant syntax. We believe development must be an enjoyable and creative experience to be truly fulfilling. Laravel takes the pain out of development by easing common tasks used in many web projects, such as:
+- PHP 8.3 or later with the extensions required by Laravel
+- Composer
+- Node.js 22.12 or later and npm
+- SQLite (the default) or another database supported by Laravel
 
-- [Simple, fast routing engine](https://laravel.com/docs/routing).
-- [Powerful dependency injection container](https://laravel.com/docs/container).
-- Multiple back-ends for [session](https://laravel.com/docs/session) and [cache](https://laravel.com/docs/cache) storage.
-- Expressive, intuitive [database ORM](https://laravel.com/docs/eloquent).
-- Database agnostic [schema migrations](https://laravel.com/docs/migrations).
-- [Robust background job processing](https://laravel.com/docs/queues).
-- [Real-time event broadcasting](https://laravel.com/docs/broadcasting).
+## Local setup
 
-Laravel is accessible, powerful, and provides tools required for large, robust applications.
+From the project directory:
 
-## Learning Laravel
-
-Laravel has the most extensive and thorough [documentation](https://laravel.com/docs) and video tutorial library of all modern web application frameworks, making it a breeze to get started with the framework.
-
-In addition, [Laracasts](https://laracasts.com) contains thousands of video tutorials on a range of topics including Laravel, modern PHP, unit testing, and JavaScript. Boost your skills by digging into our comprehensive video library.
-
-You can also watch bite-sized lessons with real-world projects on [Laravel Learn](https://laravel.com/learn), where you will be guided through building a Laravel application from scratch while learning PHP fundamentals.
-
-## Agentic Development
-
-Laravel's predictable structure and conventions make it ideal for AI coding agents like Claude Code, Cursor, and GitHub Copilot. Install [Laravel Boost](https://laravel.com/docs/ai) to supercharge your AI workflow:
-
-```bash
-composer require laravel/boost --dev
-
-php artisan boost:install
+```powershell
+composer install
+Copy-Item .env.example .env
+php artisan key:generate
+php artisan migrate
+npm install
+npm run build
+php artisan serve
 ```
 
-Boost provides your agent 15+ tools and skills that help agents build Laravel applications while following best practices.
+In another terminal, run `npm run dev` while developing frontend assets. Configure `APP_URL` to match the local application URL. The default database connection is SQLite; create `database/database.sqlite` if it does not exist before running migrations.
 
-## Contributing
+Alternatively, `composer run setup` runs the repository's setup script, including dependency installation, key generation, migrations, and the frontend build.
 
-Thank you for considering contributing to the Laravel framework! The contribution guide can be found in the [Laravel documentation](https://laravel.com/docs/contributions).
+## Configuration
 
-## Code of Conduct
+Set these values in `.env` as needed:
 
-In order to ensure that the Laravel community is welcoming to all, please review and abide by the [Code of Conduct](https://laravel.com/docs/contributions#code-of-conduct).
+| Variable | Purpose |
+| --- | --- |
+| `APP_URL` | Application base URL used for generated links and OAuth callbacks. |
+| `APP_TIMEZONE` | Timezone used to interpret event schedules and task deadlines. Defaults to `Asia/Jakarta`. |
+| `DB_CONNECTION` | Database connection; defaults to `sqlite`. |
+| `GOOGLE_CLIENT_ID` | OAuth client ID for optional Google Calendar integration. |
+| `GOOGLE_CLIENT_SECRET` | OAuth client secret. Keep this value private. |
+| `GOOGLE_REDIRECT_URI` | Optional explicit callback URL. If omitted, EventFlow uses the named OAuth callback route. |
 
-## Security Vulnerabilities
+For Google Calendar, register the callback URL (`/integrations/google-calendar/callback` on your configured `APP_URL`) in the Google OAuth client. EventFlow requests only the `calendar.events` scope. OAuth tokens are encrypted before storage. Without Google credentials, the calendar remains usable locally and the integration displays a configuration message.
 
-If you discover a security vulnerability within Laravel, please send an e-mail to Taylor Otwell via [taylor@laravel.com](mailto:taylor@laravel.com). All security vulnerabilities will be promptly addressed.
+## Accounts and administration
 
-## License
+New users can register from the sign-in page. The registration endpoint does not accept a system role; new accounts are ordinary users.
 
-The Laravel framework is open-sourced software licensed under the [MIT license](https://opensource.org/licenses/MIT).
+Create the initial administrator from a trusted terminal:
+
+```powershell
+php artisan admin:provision admin@example.com
+```
+
+The command prompts for a name, a confirmed password, and final confirmation. The password must be at least 12 characters and include mixed case, a number, and a symbol. It refuses to create another initial administrator when one already exists. After provisioning, sign in and open `/admin` to manage users, access status, events, tasks, shared event categories, and audit logs.
+
+Suspending an account invalidates its remember token and database-backed sessions. Accounts with linked events, tasks, or memberships cannot be deleted until those relationships are resolved. EventFlow also prevents an administrator from removing their own administrator access through the user-management panel.
+
+## Scheduling and notifications
+
+Event start/end times and new or changed task deadlines must be in the future, interpreted in `APP_TIMEZONE`. Existing historical schedule values can remain unchanged while other details are edited.
+
+In-app notifications cover task assignment and status changes, event updates and membership additions, and deadline reminders. Users can choose notification types in **Profile & security**. Reminder delivery is scheduled every minute:
+
+```powershell
+php artisan schedule:work
+```
+
+On a production host, configure Laravel's scheduler using the standard once-per-minute `schedule:run` cron entry.
+
+## Common commands
+
+```powershell
+php artisan migrate
+php artisan route:list
+php artisan test --compact
+vendor/bin/pint --dirty --format agent
+npm run build
+```
+
+Tests use an in-memory SQLite database and do not require Google credentials; external HTTP requests are faked in the integration tests.

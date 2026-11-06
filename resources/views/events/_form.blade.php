@@ -5,8 +5,13 @@
         @error('title')<span class="field-error">{{ $message }}</span>@enderror
     </div>
     <div class="field">
-        <label for="category">Category</label>
-        <input id="category" name="category" value="{{ old('category', $event->category ?? '') }}" maxlength="100" placeholder="e.g. Arts & culture">
+        <label for="category">Category <span class="optional-label">Optional</span></label>
+        <select id="category" name="category">
+            <option value="">Select a category</option>
+            @foreach ($categories as $value => $label)
+                <option value="{{ $value }}" @selected(old('category', $event->category ?? '') === $value)>{{ $label }}</option>
+            @endforeach
+        </select>
         @error('category')<span class="field-error">{{ $message }}</span>@enderror
     </div>
     <div class="field">
@@ -16,12 +21,12 @@
     </div>
     <div class="field">
         <label for="start_at">Starts <span class="required-mark">*</span></label>
-        <input id="start_at" name="start_at" type="datetime-local" value="{{ old('start_at', isset($event) ? $event->start_at->format('Y-m-d\TH:i') : '') }}" required>
+        <input id="start_at" name="start_at" type="datetime-local" data-future-datetime @isset($event) data-existing-value="{{ $event->start_at->format('Y-m-d\TH:i') }}" @endisset @if ($minimumScheduleAt !== null) min="{{ $minimumScheduleAt }}" @endif value="{{ old('start_at', isset($event) ? $event->start_at->format('Y-m-d\TH:i') : '') }}" required>
         @error('start_at')<span class="field-error">{{ $message }}</span>@enderror
     </div>
     <div class="field">
         <label for="end_at">Ends <span class="required-mark">*</span></label>
-        <input id="end_at" name="end_at" type="datetime-local" value="{{ old('end_at', isset($event) ? $event->end_at->format('Y-m-d\TH:i') : '') }}" required>
+        <input id="end_at" name="end_at" type="datetime-local" data-future-datetime data-after-field="start_at" @isset($event) data-existing-value="{{ $event->end_at->format('Y-m-d\TH:i') }}" @endisset @if ($minimumScheduleAt !== null) min="{{ $minimumScheduleAt }}" @endif value="{{ old('end_at', isset($event) ? $event->end_at->format('Y-m-d\TH:i') : '') }}" required>
         @error('end_at')<span class="field-error">{{ $message }}</span>@enderror
     </div>
     <div class="field field-span-two">

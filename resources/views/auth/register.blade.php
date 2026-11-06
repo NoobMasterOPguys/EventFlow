@@ -85,6 +85,7 @@
                 </form>
                 <div class="login-note"><span class="note-lock" aria-hidden="true">▣</span> Your password is stored securely.</div>
                 <div class="login-footer">Already have an account? <a href="{{ route('login') }}">Log in</a></div>
+                @include('partials.legal-links')
             </div>
         </section>
     </main>

@@ -1,5 +1,9 @@
 <?php
 
+use App\Http\Middleware\ApplySystemSettings;
+use App\Http\Middleware\EnsureActiveAccount;
+use App\Http\Middleware\EnsureAdministrator;
+use App\Http\Middleware\PreventAuthenticatedResponseCaching;
 use Illuminate\Foundation\Application;
 use Illuminate\Foundation\Configuration\Exceptions;
 use Illuminate\Foundation\Configuration\Middleware;
@@ -12,7 +16,14 @@ return Application::configure(basePath: dirname(__DIR__))
         health: '/up',
     )
     ->withMiddleware(function (Middleware $middleware): void {
-        //
+        $middleware->web(append: [
+            ApplySystemSettings::class,
+        ]);
+        $middleware->alias([
+            'authenticated.cache' => PreventAuthenticatedResponseCaching::class,
+            'active.account' => EnsureActiveAccount::class,
+            'administrator' => EnsureAdministrator::class,
+        ]);
     })
     ->withExceptions(function (Exceptions $exceptions): void {
         $exceptions->shouldRenderJsonWhen(

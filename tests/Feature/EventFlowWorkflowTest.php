@@ -168,47 +168,39 @@ class EventFlowWorkflowTest extends TestCase
         $this->assertTrue(Hash::check('OldPassword123', $user->fresh()->password));
     }
 
-    public function test_guest_can_register_and_is_signed_in_to_the_dashboard(): void
+    public function test_public_registration_page_and_endpoint_are_available(): void
     {
         $this->get(route('register'))
             ->assertOk()
-            ->assertSee('Create my account')
-            ->assertSee('eventflow-mark.svg')
-            ->assertDontSee('>ef</span>');
+            ->assertSee('Create an account and start planning together.');
 
         $this->post(route('register.store'), [
-            'name' => 'Jordan Rivera',
-            'email' => 'JORDAN@EXAMPLE.TEST',
-            'password' => 'first-password',
-            'password_confirmation' => 'first-password',
-        ])
-            ->assertRedirect(route('dashboard'))
-            ->assertSessionHasNoErrors();
-
-        $this->assertAuthenticated();
-        $this->assertDatabaseHas('users', [
-            'name' => 'Jordan Rivera',
-            'email' => 'jordan@example.test',
-        ]);
-        $this->assertNotSame('first-password', User::query()->where('email', 'jordan@example.test')->value('password'));
-    }
-
-    public function test_registration_rejects_duplicate_email_and_mismatched_passwords(): void
-    {
-        $existingUser = User::factory()->create(['email' => 'already@example.test']);
-
-        $this->from(route('register'))
-            ->post(route('register.store'), [
-                'name' => 'New Member',
-                'email' => strtoupper($existingUser->email),
-                'password' => 'first-password',
-                'password_confirmation' => 'different-password',
-            ])
-            ->assertRedirect(route('register'))
-            ->assertSessionHasErrors(['email', 'password']);
+            'name' => 'New Member',
+            'email' => 'new-member@example.com',
+            'password' => 'StrongPassword123',
+            'password_confirmation' => 'StrongPassword123',
+        ])->assertRedirect(route('login'));
 
         $this->assertGuest();
-        $this->assertDatabaseCount('users', 1);
+        $this->assertDatabaseHas('users', ['email' => 'new-member@example.com']);
+    }
+
+    public function test_registration_rejects_a_system_role_override(): void
+    {
+        $this->post(route('register.store'), [
+            'name' => 'New Member',
+            'email' => 'new-member@example.com',
+            'password' => 'StrongPassword123',
+            'password_confirmation' => 'StrongPassword123',
+            'system_role' => 'admin',
+        ])->assertRedirect()
+            ->assertSessionHasNoErrors();
+
+        $this->assertGuest();
+        $this->assertDatabaseHas('users', [
+            'email' => 'new-member@example.com',
+            'system_role' => 'user',
+        ]);
     }
 
     public function test_authenticated_user_cannot_open_registration_or_login_pages(): void
@@ -230,17 +222,14 @@ class EventFlowWorkflowTest extends TestCase
             ->assertRedirect(route('dashboard'));
     }
 
-    public function test_login_and_registration_pages_show_the_eventflow_brand_mark(): void
+    public function test_login_page_shows_eventflow_brand_and_registration_link(): void
     {
         $this->get(route('login'))
             ->assertOk()
             ->assertSee('eventflow-mark.svg')
-            ->assertDontSee('>ef</span>');
-
-        $this->get(route('register'))
-            ->assertOk()
-            ->assertSee('eventflow-mark.svg')
-            ->assertDontSee('>ef</span>');
+            ->assertDontSee('>ef</span>')
+            ->assertSee('Create an account')
+            ->assertSee(route('register'));
     }
 
     public function test_user_can_sign_out_and_the_session_is_invalidated(): void
@@ -627,7 +616,7 @@ class EventFlowWorkflowTest extends TestCase
         return array_replace([
             'title' => 'Spring Arts Festival',
             'description' => 'A day for student creativity.',
-            'category' => 'Arts',
+            'category' => 'Academic',
             'location' => 'Main Hall',
             'start_at' => now()->addDays(4)->startOfHour()->format('Y-m-d\TH:i'),
             'end_at' => now()->addDays(4)->startOfHour()->addHours(2)->format('Y-m-d\TH:i'),

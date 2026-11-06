@@ -22,6 +22,11 @@
             <div class="workspace-hero-actions">
                 @if ($isLeader)
                     <a class="button button-light" href="{{ route('events.edit', $event) }}">Edit details</a>
+                    <form method="POST" action="{{ route('events.destroy', $event) }}" data-confirm="Archive this event for everyone? Its tasks and history will be retained, and an administrator can restore it.">
+                        @csrf
+                        @method('DELETE')
+                        <button class="button button-light" type="submit">Archive event</button>
+                    </form>
                 @endif
                 <span class="hero-date-pill"><span aria-hidden="true">◷</span>{{ $event->start_at->format('D, M j · g:i A') }} – {{ $event->start_at->isSameDay($event->end_at) ? $event->end_at->format('g:i A') : $event->end_at->format('M j · g:i A') }}</span>
             </div>
@@ -126,7 +131,7 @@
                         @csrf
                         <div class="field"><label for="task-title">Task name</label><input id="task-title" name="title" value="{{ old('title') }}" maxlength="150" placeholder="What needs doing?" required>@error('title')<span class="field-error">{{ $message }}</span>@enderror</div>
                         <div class="field"><label for="task-assignee">Assign to</label><select id="task-assignee" name="assigned_to"><option value="">Leave unassigned</option>@foreach ($event->members as $member)<option value="{{ $member->id }}" @selected((string) old('assigned_to') === (string) $member->id)>{{ $member->name }}</option>@endforeach</select>@error('assigned_to')<span class="field-error">{{ $message }}</span>@enderror</div>
-                        <div class="field"><label for="task-due">Due date</label><input id="task-due" name="due_at" type="datetime-local" value="{{ old('due_at') }}">@error('due_at')<span class="field-error">{{ $message }}</span>@enderror</div>
+                        <div class="field"><label for="task-due">Due date</label><input id="task-due" name="due_at" type="datetime-local" data-future-datetime min="{{ now()->addMinute()->startOfMinute()->format('Y-m-d\TH:i') }}" value="{{ old('due_at') }}">@error('due_at')<span class="field-error">{{ $message }}</span>@enderror</div>
                         <div class="field"><label for="task-priority">Priority</label><select id="task-priority" name="priority" required>@foreach (['medium' => 'Medium', 'low' => 'Low', 'high' => 'High'] as $value => $label)<option value="{{ $value }}" @selected(old('priority', 'medium') === $value)>{{ $label }}</option>@endforeach</select>@error('priority')<span class="field-error">{{ $message }}</span>@enderror</div>
                         <div class="field"><label for="task-description">Details <span class="optional-label">Optional</span></label><textarea id="task-description" name="description" rows="3" maxlength="5000">{{ old('description') }}</textarea>@error('description')<span class="field-error">{{ $message }}</span>@enderror</div>
                         <input type="hidden" name="status" value="not_started">

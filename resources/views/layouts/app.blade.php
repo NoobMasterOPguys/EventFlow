@@ -1,11 +1,11 @@
 <!DOCTYPE html>
-<html lang="{{ str_replace('_', '-', app()->getLocale()) }}">
+<html lang="{{ str_replace('_', '-', app()->getLocale()) }}" data-timezone="{{ config('app.timezone') }}">
 <head>
     <meta charset="utf-8">
     <meta name="viewport" content="width=device-width, initial-scale=1">
     <meta name="csrf-token" content="{{ csrf_token() }}">
     <link rel="icon" type="image/svg+xml" href="{{ asset('eventflow-mark.svg') }}">
-    <title>@yield('title', 'Workspace') · EventFlow</title>
+    <title>@yield('title', 'Workspace') · {{ $applicationName }}</title>
     @fonts
     @if (file_exists(public_path('build/manifest.json')) || file_exists(public_path('hot')))
         @vite(['resources/css/app.css', 'resources/js/app.js'])
@@ -35,6 +35,15 @@
                 <a class="nav-link {{ request()->routeIs('tasks.*') ? 'is-active' : '' }}" href="{{ route('tasks.index') }}">
                     <span class="nav-icon" aria-hidden="true">✓</span><span>My tasks</span>
                 </a>
+                <a class="nav-link {{ request()->routeIs('notifications.*') ? 'is-active' : '' }}" href="{{ route('notifications.index') }}">
+                    <span class="nav-icon" aria-hidden="true">♢</span><span>Notifications</span>
+                    <span class="notification-count" data-notification-count @if ($unreadNotificationCount === 0) hidden @endif>{{ $unreadNotificationCount > 99 ? '99+' : $unreadNotificationCount }}</span>
+                </a>
+                @if (auth()->user()->can('dashboard.view'))
+                    <a class="nav-link" href="{{ route('admin.dashboard') }}">
+                        <span class="nav-icon" aria-hidden="true">⌘</span><span>Administration</span>
+                    </a>
+                @endif
             </nav>
 
             <div class="sidebar-bottom">
@@ -67,6 +76,17 @@
                 </form>
                 <div class="topbar-right">
                     <span class="today-label">{{ now()->format('D, M j') }}</span>
+                    <div class="notification-popover-wrap">
+                        <button class="topbar-notifications" type="button" aria-label="Notifications{{ $unreadNotificationCount > 0 ? ', '.$unreadNotificationCount.' unread' : '' }}" aria-expanded="false" aria-controls="notification-popover" data-notification-feed="{{ route('notifications.feed') }}" data-notification-toggle>
+                            <span aria-hidden="true">♢</span>
+                            @if ($unreadNotificationCount > 0)<span class="topbar-notification-count" data-notification-count>{{ $unreadNotificationCount > 99 ? '99+' : $unreadNotificationCount }}</span>@endif
+                        </button>
+                        <div class="notification-popover" id="notification-popover" role="dialog" aria-label="Unread notifications" data-notification-popover hidden>
+                            <div class="notification-popover-heading"><strong>Notifications</strong><a href="{{ route('notifications.index') }}">View all</a></div>
+                            <div class="notification-popover-loading" data-notification-loading>Loading notifications...</div>
+                            <div class="notification-popover-list" data-notification-list></div>
+                        </div>
+                    </div>
                     <a class="topbar-avatar" href="{{ route('profile.edit') }}" aria-label="Open profile">
                         {{ \Illuminate\Support\Str::of(auth()->user()->name)->substr(0, 1)->upper() }}
                     </a>
@@ -77,6 +97,12 @@
                 @if (session('success'))
                     <div class="flash-message flash-success" role="status">
                         <span aria-hidden="true">✓</span>{{ session('success') }}
+                        <button type="button" aria-label="Dismiss message" data-dismiss>×</button>
+                    </div>
+                @endif
+                @if (session('error'))
+                    <div class="flash-message flash-error" role="alert">
+                        <span aria-hidden="true">!</span>{{ session('error') }}
                         <button type="button" aria-label="Dismiss message" data-dismiss>×</button>
                     </div>
                 @endif

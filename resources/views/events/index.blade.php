@@ -19,8 +19,8 @@
                 <span class="sr-only">Category</span>
                 <select name="category">
                     <option value="">All categories</option>
-                    @foreach ($categories as $category)
-                        <option value="{{ $category }}" @selected(($filters['category'] ?? '') === $category)>{{ $category }}</option>
+                    @foreach ($categories as $value => $label)
+                        <option value="{{ $value }}" @selected(($filters['category'] ?? '') === $value)>{{ $label }}</option>
                     @endforeach
                 </select>
             </label>
@@ -56,28 +56,37 @@
                         ? (int) round(($event->completed_tasks_count / $event->active_tasks_count) * 100)
                         : null;
                 @endphp
-                <a class="event-card" href="{{ route('events.show', $event) }}">
-                    <div class="event-card-art art-{{ $loop->iteration % 4 }}">
-                        <span class="event-card-category">{{ $event->category ?: 'School event' }} · {{ ucfirst($event->pivot->role) }}</span>
-                        <span class="status-badge status-{{ $event->status }}">{{ str($event->status)->replace('_', ' ')->title() }}</span>
-                        <span class="art-symbol" aria-hidden="true">{{ ['✦', '◈', '✳', '✧'][$loop->iteration % 4] }}</span>
-                        <span class="event-card-date"><strong>{{ $event->start_at->format('d') }}</strong><small>{{ $event->start_at->format('M') }}</small></span>
-                    </div>
-                    <div class="event-card-content">
-                        <h2>{{ $event->title }}</h2>
-                        <p class="event-card-meta"><span aria-hidden="true">◷</span>{{ $event->start_at->format('D, M j · g:i A') }}</p>
-                        <p class="event-card-meta"><span aria-hidden="true">⌖</span>{{ $event->location }}</p>
-                        <div class="event-card-footer">
-                            @if ($progress !== null)
-                                <span class="progress-track"><span style="width: {{ $progress }}%"></span></span>
-                                <small>{{ $progress }}%</small>
-                            @else
-                                <small>No tasks yet</small>
-                            @endif
-                            <span class="card-arrow" aria-hidden="true">↗</span>
+                <article class="event-card">
+                    <a class="event-card-link" href="{{ route('events.show', $event) }}">
+                        <div class="event-card-art art-{{ $loop->iteration % 4 }}">
+                            <span class="event-card-category">{{ $event->category ?: 'School event' }} · {{ ucfirst($event->pivot->role) }}</span>
+                            <span class="status-badge status-{{ $event->status }}">{{ str($event->status)->replace('_', ' ')->title() }}</span>
+                            <span class="art-symbol" aria-hidden="true">{{ ['✦', '◈', '✳', '✧'][$loop->iteration % 4] }}</span>
+                            <span class="event-card-date"><strong>{{ $event->start_at->format('d') }}</strong><small>{{ $event->start_at->format('M') }}</small></span>
                         </div>
-                    </div>
-                </a>
+                        <div class="event-card-content">
+                            <h2>{{ $event->title }}</h2>
+                            <p class="event-card-meta"><span aria-hidden="true">◷</span>{{ $event->start_at->format('D, M j · g:i A') }}</p>
+                            <p class="event-card-meta"><span aria-hidden="true">⌖</span>{{ $event->location }}</p>
+                            <div class="event-card-footer">
+                                @if ($progress !== null)
+                                    <span class="progress-track"><span style="width: {{ $progress }}%"></span></span>
+                                    <small>{{ $progress }}%</small>
+                                @else
+                                    <small>No tasks yet</small>
+                                @endif
+                                <span class="card-arrow" aria-hidden="true">↗</span>
+                            </div>
+                        </div>
+                    </a>
+                    @if ($event->pivot->role === 'leader')
+                        <form class="event-card-actions" method="POST" action="{{ route('events.destroy', $event) }}" data-confirm="Archive {{ $event->title }} for everyone? Its tasks and history will be retained, and an administrator can restore it.">
+                            @csrf
+                            @method('DELETE')
+                            <button class="text-link text-danger" type="submit" aria-label="Archive {{ $event->title }}">Archive event</button>
+                        </form>
+                    @endif
+                </article>
             @endforeach
         </div>
         <div class="pagination-wrap">{{ $events->links() }}</div>

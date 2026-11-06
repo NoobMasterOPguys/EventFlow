@@ -2,6 +2,7 @@
 
 namespace App\Http\Controllers;
 
+use App\Services\GoogleCalendarService;
 use Carbon\CarbonImmutable;
 use Carbon\CarbonInterface;
 use Illuminate\Http\Request;
@@ -9,7 +10,7 @@ use Illuminate\View\View;
 
 class CalendarController extends Controller
 {
-    public function __invoke(Request $request): View
+    public function __invoke(Request $request, GoogleCalendarService $googleCalendarService): View
     {
         $validated = $request->validate([
             'month' => ['nullable', 'date_format:Y-m'],
@@ -70,6 +71,8 @@ class CalendarController extends Controller
             'hasCalendarItems' => $eventsByDate->isNotEmpty() || $tasksByDate->isNotEmpty(),
             'previousMonth' => $month->subMonth()->format('Y-m'),
             'nextMonth' => $month->addMonth()->format('Y-m'),
+            'googleCalendarConfigured' => $googleCalendarService->isConfigured(),
+            'googleCalendarConnected' => $request->user()->hasGoogleCalendarConnection(),
         ]);
     }
 }
