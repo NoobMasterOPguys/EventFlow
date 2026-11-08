@@ -18,15 +18,12 @@ use App\Http\Controllers\CalendarController;
 use App\Http\Controllers\DashboardController;
 use App\Http\Controllers\EventController;
 use App\Http\Controllers\GoogleCalendarController;
-use App\Http\Controllers\LegalPageController;
 use App\Http\Controllers\NotificationController;
 use App\Http\Controllers\ProfileController;
 use App\Http\Controllers\TaskController;
 use Illuminate\Support\Facades\Route;
 
 Route::get('/', [AuthenticatedSessionController::class, 'create'])->middleware('guest');
-Route::get('/privacy', [LegalPageController::class, 'privacy'])->name('legal.privacy');
-Route::get('/terms', [LegalPageController::class, 'terms'])->name('legal.terms');
 
 Route::middleware('guest')->group(function (): void {
     Route::get('/login', [AuthenticatedSessionController::class, 'create'])->name('login');
