@@ -17,7 +17,6 @@ use App\Http\Controllers\Auth\RegisteredUserController;
 use App\Http\Controllers\CalendarController;
 use App\Http\Controllers\DashboardController;
 use App\Http\Controllers\EventController;
-use App\Http\Controllers\GoogleCalendarController;
 use App\Http\Controllers\NotificationController;
 use App\Http\Controllers\ProfileController;
 use App\Http\Controllers\TaskController;
@@ -53,10 +52,6 @@ Route::middleware(['auth', 'active.account', 'authenticated.cache'])->group(func
     Route::delete('/tasks/{task}', [TaskController::class, 'destroy'])->name('tasks.destroy');
 
     Route::get('/calendar', CalendarController::class)->name('calendar');
-    Route::get('/integrations/google-calendar/connect', [GoogleCalendarController::class, 'connect'])->name('google-calendar.connect');
-    Route::get('/integrations/google-calendar/callback', [GoogleCalendarController::class, 'callback'])->name('google-calendar.callback');
-    Route::post('/integrations/google-calendar/sync', [GoogleCalendarController::class, 'sync'])->name('google-calendar.sync');
-    Route::delete('/integrations/google-calendar', [GoogleCalendarController::class, 'disconnect'])->name('google-calendar.disconnect');
     Route::get('/notifications', [NotificationController::class, 'index'])->name('notifications.index');
     Route::get('/notifications/feed', [NotificationController::class, 'feed'])->name('notifications.feed');
     Route::patch('/notifications/read-all', [NotificationController::class, 'markAllAsRead'])->name('notifications.read-all');

@@ -12,39 +12,6 @@
             <strong>{{ $month->format('F Y') }}</strong>
         </div>
     </div>
-    <section class="panel google-calendar-panel" aria-labelledby="google-calendar-heading">
-        <div class="google-calendar-copy">
-            <span class="eyebrow">KEEP YOUR SCHEDULE IN SYNC</span>
-            <h2 id="google-calendar-heading">Google Calendar</h2>
-            @if (! $googleCalendarConfigured)
-                <p>Connection is not configured yet. Add <code>GOOGLE_CLIENT_ID</code> and <code>GOOGLE_CLIENT_SECRET</code> to the application environment to enable OAuth.</p>
-            @elseif ($googleCalendarConnected)
-                <p><span class="connection-indicator is-connected" aria-hidden="true"></span>Connected. Sync exports events you can access and updates or removes them on the next sync.</p>
-            @else
-                <p><span class="connection-indicator" aria-hidden="true"></span>Not connected. EventFlow only exports events after you authorize Google Calendar.</p>
-            @endif
-        </div>
-        @if ($googleCalendarConfigured && $googleCalendarConnected)
-            <div class="google-calendar-actions">
-                <form method="POST" action="{{ route('google-calendar.sync') }}">
-                    @csrf
-                    <button class="button button-primary" type="submit">Sync events</button>
-                </form>
-                <form method="POST" action="{{ route('google-calendar.disconnect') }}">
-                    @csrf
-                    @method('DELETE')
-                    <button class="button button-quiet" type="submit">Disconnect</button>
-                </form>
-            </div>
-        @elseif ($googleCalendarConfigured)
-            <form method="GET" action="{{ route('google-calendar.connect') }}" data-loading-form>
-                <button class="button button-primary" type="submit">
-                    <span class="button-label">Connect Google Calendar</span>
-                    <span class="button-loading" aria-hidden="true">Connecting…</span>
-                </button>
-            </form>
-        @endif
-    </section>
     <section class="panel calendar-panel">
         @unless ($hasCalendarItems)
             <div class="calendar-empty"><span class="empty-illustration" aria-hidden="true">✦</span><div><strong>A little breathing room.</strong><p>Events and assigned task deadlines will appear here as your plans take shape.</p></div><a class="text-link" href="{{ route('events.create') }}">Create an event →</a></div>

@@ -23,8 +23,6 @@ class SystemSettingController extends Controller
                 'deadline_reminder_hours' => SystemSetting::get('deadline_reminder_hours', 24),
             ],
             'timezones' => timezone_identifiers_list(),
-            'googleCalendarConfigured' => filled(config('services.google.client_id'))
-                && filled(config('services.google.client_secret')),
         ]);
     }
 

@@ -348,13 +348,6 @@ button { color: inherit; }
 .task-table-row .status-badge { min-width: 82px; justify-content: center; }
 .task-deadline { width: 110px; color: var(--muted); font-size: 10px; text-align: right; white-space: nowrap; }
 .task-deadline small { display: block; color: inherit; font-size: 9px; }
-.google-calendar-panel { display: flex; align-items: center; justify-content: space-between; gap: 20px; margin-bottom: 17px; padding: 16px 19px; }
-.google-calendar-copy h2 { margin: 3px 0 4px; font-size: 16px; font-weight: 600; }
-.google-calendar-copy p { margin: 0; color: var(--muted); font-size: 11px; }
-.google-calendar-copy code { color: var(--purple-dark); font-size: 10px; }
-.google-calendar-actions { display: flex; align-items: center; gap: 7px; }
-.connection-indicator { display: inline-block; width: 8px; height: 8px; margin-right: 5px; border-radius: 50%; background: var(--orange); }
-.connection-indicator.is-connected { background: var(--green); }
 .calendar-heading { align-items: center; }
 .calendar-controls { display: flex; align-items: center; gap: 6px; }
 .calendar-controls strong { min-width: 110px; margin-left: 8px; font-size: 13px; font-weight: 600; text-align: right; }
@@ -708,8 +701,6 @@ button { color: inherit; }
     .task-deadline { grid-column: 3; grid-row: 2; width: auto; font-size: 9px; }
     .task-table-row form { grid-column: 1; grid-row: 2; }
     .calendar-heading { align-items: flex-start; flex-direction: column; }
-    .google-calendar-panel { align-items: flex-start; flex-direction: column; }
-    .google-calendar-actions { width: 100%; flex-wrap: wrap; }
     .notification-card { flex-wrap: wrap; }
     .notification-content { flex-basis: calc(100% - 23px); }
     .notification-actions { margin-left: 22px; }

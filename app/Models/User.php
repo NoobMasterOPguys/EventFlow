@@ -19,9 +19,6 @@ use Illuminate\Notifications\Notifiable;
 #[Hidden([
     'password',
     'remember_token',
-    'google_access_token',
-    'google_refresh_token',
-    'google_token_expires_at',
 ])]
 class User extends Authenticatable
 {
@@ -148,16 +145,8 @@ class User extends Authenticatable
             'last_login_at' => 'datetime',
             'last_activity_at' => 'datetime',
             'is_super_admin' => 'boolean',
-            'google_access_token' => 'encrypted',
-            'google_refresh_token' => 'encrypted',
-            'google_token_expires_at' => 'datetime',
             'notification_preferences' => 'array',
             'admin_permissions' => 'array',
         ];
-    }
-
-    public function hasGoogleCalendarConnection(): bool
-    {
-        return filled($this->google_access_token) && filled($this->google_refresh_token);
     }
 }

@@ -137,10 +137,6 @@ class AccountOffboarding
                     ->delete();
             }
 
-            DB::table('google_calendar_event_mappings')
-                ->where('user_id', $lockedUser->getKey())
-                ->delete();
-
             $lockedUser->forceFill([
                 'name' => 'Deleted user',
                 'email' => 'deleted-user-'.$lockedUser->getKey().'-'.Str::lower(Str::random(12)).'@deleted.invalid',
@@ -157,9 +153,6 @@ class AccountOffboarding
                 'notification_preferences' => null,
                 'last_login_at' => null,
                 'last_activity_at' => null,
-                'google_access_token' => null,
-                'google_refresh_token' => null,
-                'google_token_expires_at' => null,
             ])->save();
 
             AuditLog::record($lockedUser, 'user.account_deleted', $lockedUser, [], $ipAddress);

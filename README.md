@@ -1,6 +1,6 @@
 # EventFlow
 
-EventFlow is a Laravel application for coordinating school and community events. Members can manage event schedules, assign and track tasks, view a personal calendar, receive in-app notifications, and optionally export events to Google Calendar. Administrators have a separate platform area for managing users, events, tasks, categories, and audit history.
+EventFlow is a Laravel application for coordinating school and community events. Members can manage event schedules, assign and track tasks, view a personal calendar, and receive in-app notifications. Administrators have a separate platform area for managing users, events, tasks, categories, and audit history.
 
 ## Requirements
 
@@ -33,15 +33,9 @@ Set these values in `.env` as needed:
 
 | Variable | Purpose |
 | --- | --- |
-| `APP_URL` | Application base URL used for generated links and OAuth callbacks. |
+| `APP_URL` | Application base URL used for generated links. |
 | `APP_TIMEZONE` | Timezone used to interpret event schedules and task deadlines. Defaults to `Asia/Jakarta`. |
 | `DB_CONNECTION` | Database connection; defaults to `sqlite`. |
-| `GOOGLE_CLIENT_ID` | OAuth client ID for optional Google Calendar integration. |
-| `GOOGLE_CLIENT_SECRET` | OAuth client secret. Keep this value private. |
-| `GOOGLE_REDIRECT_URI` | Optional explicit callback URL. If omitted, EventFlow uses the named OAuth callback route. |
-
-For Google Calendar, register the callback URL (`/integrations/google-calendar/callback` on your configured `APP_URL`) in the Google OAuth client. EventFlow requests only the `calendar.events` scope. OAuth tokens are encrypted before storage. Without Google credentials, the calendar remains usable locally and the integration displays a configuration message.
-
 ## Accounts and administration
 
 New users can register from the sign-in page. The registration endpoint does not accept a system role; new accounts are ordinary users.
@@ -78,4 +72,4 @@ vendor/bin/pint --dirty --format agent
 npm run build
 ```
 
-Tests use an in-memory SQLite database and do not require Google credentials; external HTTP requests are faked in the integration tests.
+Tests use an in-memory SQLite database.

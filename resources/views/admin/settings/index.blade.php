@@ -16,12 +16,4 @@
             <div class="form-actions admin-form-wide"><button class="button button-primary" type="submit">Save settings</button></div>
         </form>
     </section>
-    <section class="panel admin-panel">
-        <div class="admin-section-heading"><div><span class="eyebrow">INTEGRATIONS</span><h2>Google Calendar</h2></div></div>
-        <div class="admin-breakdown">
-            <div><span>OAuth configuration</span><strong>{{ $googleCalendarConfigured ? 'Configured' : 'Not configured' }}</strong></div>
-            <div><span>Credential access</span><strong>Environment only</strong></div>
-        </div>
-        <p class="admin-muted">OAuth credentials are never displayed here. Configure them through the deployment environment.</p>
-    </section>
 @endsection

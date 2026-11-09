@@ -39,8 +39,6 @@ class AuditLog extends Model
             'password',
             'password_confirmation',
             'password_hash',
-            'google_access_token',
-            'google_refresh_token',
             'access_token',
             'refresh_token',
             'client_secret',
