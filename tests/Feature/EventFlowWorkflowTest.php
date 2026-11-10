@@ -5,7 +5,7 @@ namespace Tests\Feature;
 use App\Models\Event;
 use App\Models\Task;
 use App\Models\User;
-use Illuminate\Auth\Notifications\ResetPassword;
+use App\Notifications\BrevoPasswordResetNotification;
 use Illuminate\Foundation\Testing\RefreshDatabase;
 use Illuminate\Support\Facades\Hash;
 use Illuminate\Support\Facades\Notification;
@@ -63,11 +63,11 @@ class EventFlowWorkflowTest extends TestCase
             ->assertSessionHas('status', 'If an account exists for this email, we will send a password reset link. If you requested one recently, wait a minute before trying again.');
 
         $token = null;
-        Notification::assertSentTo($user, ResetPassword::class, function (ResetPassword $notification) use (&$token): bool {
-            $token = $notification->token;
+        Notification::assertSentTo($user, BrevoPasswordResetNotification::class, function (BrevoPasswordResetNotification $notification) use (&$token): bool {
+    $token = $notification->token;
 
-            return true;
-        });
+    return true;
+});
 
         $this->assertIsString($token);
         $this->get(route('password.reset', ['token' => $token, 'email' => $user->email]))

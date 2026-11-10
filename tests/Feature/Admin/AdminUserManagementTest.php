@@ -4,7 +4,7 @@ namespace Tests\Feature\Admin;
 
 use App\Models\Event;
 use App\Models\User;
-use Illuminate\Auth\Notifications\ResetPassword;
+use App\Notifications\BrevoPasswordResetNotification;
 use Illuminate\Foundation\Testing\RefreshDatabase;
 use Illuminate\Support\Facades\Notification;
 use Tests\TestCase;
@@ -33,7 +33,7 @@ class AdminUserManagementTest extends TestCase
             'action' => 'user.created',
             'auditable_id' => $user->getKey(),
         ]);
-        Notification::assertSentTo($user, ResetPassword::class);
+        Notification::assertSentTo($user, BrevoPasswordResetNotification::class);
     }
 
     public function test_administrator_can_suspend_and_reactivate_a_user(): void

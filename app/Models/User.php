@@ -14,6 +14,7 @@ use Illuminate\Database\Eloquent\Relations\HasMany;
 use Illuminate\Database\Eloquent\SoftDeletes;
 use Illuminate\Foundation\Auth\User as Authenticatable;
 use Illuminate\Notifications\Notifiable;
+use App\Notifications\BrevoPasswordResetNotification;
 
 #[Fillable(['name', 'email', 'password'])]
 #[Hidden([
@@ -149,4 +150,11 @@ class User extends Authenticatable
             'admin_permissions' => 'array',
         ];
     }
+     /**
+ * Send the password reset notification through Brevo.
+ */
+public function sendPasswordResetNotification($token): void
+{
+    $this->notify(new BrevoPasswordResetNotification($token));
+}
 }
