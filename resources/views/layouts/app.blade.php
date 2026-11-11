@@ -4,6 +4,7 @@
     <meta charset="utf-8">
     <meta name="viewport" content="width=device-width, initial-scale=1">
     <meta name="csrf-token" content="{{ csrf_token() }}">
+    <meta name="google-site-verification" content="QbfSHptmTmYstIQ3e1HcdYuVWVlBnsN3zIZ0fciMVzI" />
     <link rel="icon" type="image/svg+xml" href="{{ asset('eventflow-mark.svg') }}">
     <title>@yield('title', 'Workspace') · {{ $applicationName }}</title>
     @fonts
