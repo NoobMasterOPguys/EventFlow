@@ -73,3 +73,55 @@ npm run build
 ```
 
 Tests use an in-memory SQLite database.
+
+## System Architecture and Flowcharts
+
+EventFlow is a server-rendered Laravel MVC application. Browser requests pass through Laravel routes and middleware to controllers and Eloquent models; Blade produces HTML, while Vite builds the Tailwind CSS and JavaScript assets. The repository supports SQLite for local development and tests and includes MySQL configuration. Railway is the reported deployment target, but deployment configuration in the repository has not been verified.
+
+Technology stack: PHP 8.5 / Laravel 13, Blade, HTML, Tailwind CSS 4, vanilla JavaScript, Vite, Eloquent, SQLite/MySQL support, Composer, npm, Git, and GitHub. Brevo is connected for password-reset email. In-app notifications are stored in the database.
+
+### Overall system architecture
+
+![EventFlow overall system architecture](docs/diagrams/system-architecture.svg)
+
+The request/response path runs from the browser through Laravel routing and middleware to controllers, Eloquent, and the configured database. The Railway and production MySQL elements are reported targets, not confirmed deployment configuration.
+
+Color key: blue denotes the client, green the Laravel application, purple data storage, and orange external services.
+
+### Authentication and authorization
+
+![EventFlow authentication and authorization flow](docs/diagrams/authentication-flowchart.svg)
+
+The flow shows credential validation, throttling, session renewal, active-account checks, administrator permission gates, logout, and password reset.
+
+### Event management
+
+![EventFlow event management workflow](docs/diagrams/event-management-flowchart.svg)
+
+Authenticated users can create events and become their initial leaders. Event membership controls visibility; leaders manage event details, membership, and archival.
+
+### Task management
+
+![EventFlow task management workflow](docs/diagrams/task-management-flowchart.svg)
+
+Event leaders create and assign tasks; assigned members can update their task status. Notifications are preference-aware, and progress is derived from task status.
+
+### Administrator workflow
+
+![EventFlow administrator workflow](docs/diagrams/administrator-flowchart.svg)
+
+Administrator routes require the administrator role and relevant permission. The workflow summarizes account, event, task, category, announcement, system-setting, reporting, and audit functions.
+
+### Database entity relationship diagram
+
+![EventFlow database entity relationship diagram](docs/diagrams/database-erd.svg)
+
+The ERD is based on the migrations, including the event-membership pivot, composite task-assignment constraint, soft-delete fields, polymorphic audit/notification records, and Laravel support tables.
+
+### Deployment architecture
+
+![EventFlow deployment architecture](docs/diagrams/deployment-architecture.svg)
+
+The diagram separates the documented Laragon/Git/GitHub workflow from the reported Railway target. The repository does not establish the production deployment trigger, build procedure, runtime, or active database.
+
+See the [complete diagram documentation](docs/diagrams/README.md) for all editable Mermaid sources, rendering instructions, schema notes, and implementation details that still require deployment verification.

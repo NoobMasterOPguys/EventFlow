@@ -1,0 +1,78 @@
+---
+title: EventFlow - Authentication and Authorization
+config:
+  theme: base
+  themeVariables:
+    fontFamily: Arial, sans-serif
+    primaryTextColor: "#111827"
+    lineColor: "#475569"
+---
+flowchart TD
+    start([Start])
+    access[/Open EventFlow or a protected page/]
+    login["Show login page<br/>GET /login"]
+    credentials[/Enter email and password/]
+    valid{"Input valid?"}
+    validationError[/Show validation error/]
+    rateLimited{"Sign-in rate limit exceeded?"}
+    throttleError[/Show retry-after error/]
+    attempt["Attempt Laravel authentication"]
+    authenticated{"Credentials accepted?"}
+    authError[/Show incorrect email or password error/]
+    regenerate["Clear failed-attempt counter<br/>Regenerate session ID<br/>Update last-login timestamp"]
+    adminLogin{"Administrator account?"}
+    recordLogin["Record administrator login audit event"]
+    protected["Request intended destination<br/>or default to /dashboard"]
+    active{"Account active?"}
+    forceLogout["Log out; invalidate session<br/>and regenerate CSRF token"]
+    suspended[/Return to login with suspension message/]
+    adminRoute{"Admin route requested?"}
+    adminCheck["Run administrator middleware<br/>and route permission gate"]
+    permitted{"Administrator and permission granted?"}
+    forbidden[/Return HTTP 403/]
+    response[/Render authorized page/]
+    logout[/Submit POST /logout/]
+    auditLogout["Record administrator logout, when applicable"]
+    logoutSession["Log out; invalidate session<br/>and regenerate CSRF token"]
+    loginAgain[/Redirect to login/]
+    reset[/Forgot password branch:<br/>request reset link, then submit<br/>valid token and confirmed password/]
+    broker["Laravel password broker<br/>stores token and applies throttling"]
+    mail["Send reset email using Brevo<br/>when mail credentials are configured"]
+    newPassword[/Save new password<br/>and replace remember token/]
+    finish([End])
+
+    start --> access --> login
+    login --> credentials --> valid
+    valid -- No --> validationError --> login
+    valid -- Yes --> rateLimited
+    rateLimited -- Yes --> throttleError --> login
+    rateLimited -- No --> attempt --> authenticated
+    authenticated -- No --> authError --> login
+    authenticated -- Yes --> regenerate --> adminLogin
+    adminLogin -- Yes --> recordLogin --> protected
+    adminLogin -- No --> protected
+    protected --> active
+    active -- No --> forceLogout --> suspended --> login
+    active -- Yes --> adminRoute
+    adminRoute -- No --> response
+    adminRoute -- Yes --> adminCheck --> permitted
+    permitted -- No --> forbidden --> finish
+    permitted -- Yes --> response
+    response --> logout
+    logout --> auditLogout --> logoutSession --> loginAgain --> finish
+    login --> reset
+    reset --> broker --> mail --> newPassword --> login
+
+    classDef clientStyle fill:#dbeafe,stroke:#2563eb,color:#172554
+    classDef processStyle fill:#dcfce7,stroke:#16a34a,color:#14532d
+    classDef decisionStyle fill:#fef3c7,stroke:#d97706,color:#78350f
+    classDef ioStyle fill:#e0f2fe,stroke:#0284c7,color:#0c4a6e
+    classDef errorStyle fill:#fee2e2,stroke:#dc2626,color:#7f1d1d
+    classDef externalStyle fill:#ffedd5,stroke:#c2410c,color:#7c2d12
+    classDef endStyle fill:#f1f5f9,stroke:#64748b,color:#1e293b
+
+    class access,login,credentials,reset,newPassword,suspended,loginAgain,authError,validationError,throttleError,forbidden,response ioStyle
+    class regenerate,attempt,recordLogin,protected,forceLogout,adminCheck,auditLogout,logoutSession,broker processStyle
+    class valid,rateLimited,authenticated,adminLogin,active,adminRoute,permitted decisionStyle
+    class mail externalStyle
+    class start,finish endStyle

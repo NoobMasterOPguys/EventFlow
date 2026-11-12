@@ -1,0 +1,72 @@
+---
+title: EventFlow - Administrator Workflow
+config:
+  theme: base
+  themeVariables:
+    fontFamily: Arial, sans-serif
+    primaryTextColor: "#111827"
+    lineColor: "#475569"
+---
+flowchart TD
+    start([Start])
+    login["Sign in through the shared login flow"]
+    active["Protected routes require an active account"]
+    adminCheck{"system_role is admin?"}
+    denyAdmin[/Return HTTP 403/]
+    permission["Administrator middleware<br/>then feature-specific permission gate"]
+    permissionCheck{"Permission granted<br/>or super administrator?"}
+    denyPermission[/Return HTTP 403/]
+    adminDashboard[/Open /admin dashboard/]
+    branch{"Choose administration area"}
+    users["Manage accounts<br/>create, edit, change role, suspend/reactivate,<br/>soft-delete/restore, send password reset"]
+    userGuard["Enforce self/last-admin protections;<br/>suspension invalidates database sessions"]
+    events["Manage events and memberships;<br/>update status, archive/restore"]
+    tasks["Review, update, archive/restore tasks"]
+    categories["Create/update/delete categories<br/>and change active status"]
+    announcements["Draft, schedule, publish, or cancel<br/>announcements to active users"]
+    settings["Update application name, timezone,<br/>registration enabled, reminder hours"]
+    reports["View and export reports"]
+    audit["Read audit history"]
+    profile["View administrator profile"]
+    noticeDelivery["Store recipient announcements as<br/>database notifications"]
+    auditWrite["Record administrative changes<br/>in audit_logs"]
+    database[("Database")]
+    finish([End])
+
+    start --> login --> active --> adminCheck
+    adminCheck -- No --> denyAdmin --> finish
+    adminCheck -- Yes --> permission --> permissionCheck
+    permissionCheck -- No --> denyPermission --> finish
+    permissionCheck -- Yes --> adminDashboard --> branch
+    branch --> users --> userGuard --> database
+    branch --> events --> database
+    branch --> tasks --> database
+    branch --> categories --> database
+    branch --> announcements --> noticeDelivery --> database
+    branch --> settings --> database
+    branch --> reports --> database
+    branch --> audit --> database
+    branch --> profile
+    users --> auditWrite --> database
+    events --> auditWrite
+    tasks --> auditWrite
+    categories --> auditWrite
+    announcements --> auditWrite
+    settings --> auditWrite
+    adminDashboard --> finish
+    profile --> finish
+    database --> finish
+
+    classDef clientStyle fill:#dbeafe,stroke:#2563eb,color:#172554
+    classDef processStyle fill:#dcfce7,stroke:#16a34a,color:#14532d
+    classDef decisionStyle fill:#fef3c7,stroke:#d97706,color:#78350f
+    classDef ioStyle fill:#e0f2fe,stroke:#0284c7,color:#0c4a6e
+    classDef dataStyle fill:#f3e8ff,stroke:#7e22ce,color:#3b0764
+    classDef errorStyle fill:#fee2e2,stroke:#dc2626,color:#7f1d1d
+    classDef endStyle fill:#f1f5f9,stroke:#64748b,color:#1e293b
+
+    class login,adminDashboard,denyAdmin,denyPermission ioStyle
+    class active,permission,users,userGuard,events,tasks,categories,announcements,settings,reports,audit,profile,noticeDelivery,auditWrite processStyle
+    class adminCheck,permissionCheck,branch decisionStyle
+    class database dataStyle
+    class start,finish endStyle

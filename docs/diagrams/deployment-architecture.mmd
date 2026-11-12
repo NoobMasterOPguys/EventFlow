@@ -1,0 +1,58 @@
+---
+title: EventFlow - Deployment Architecture
+config:
+  theme: base
+  themeVariables:
+    fontFamily: Arial, sans-serif
+    primaryTextColor: "#111827"
+    lineColor: "#475569"
+---
+flowchart LR
+    developer["Developer"]
+    subgraph local["LOCAL DEVELOPMENT - Laragon"]
+        source["EventFlow source<br/>PHP / Laravel / Blade"]
+        composer["Composer dependencies"]
+        npm["npm dependencies"]
+        vite["Vite production build<br/>npm run build"]
+        assets["Generated public/build assets"]
+        sqlite[("SQLite<br/>documented local default")]
+        source --> composer
+        source --> npm --> vite --> assets
+        source --> sqlite
+    end
+
+    git["Git working tree"]
+    github["GitHub repository<br/>NoobMasterOPguys/EventFlow"]
+    deployment["Deployment hand-off<br/>Trigger and build procedure<br/>not found in repository"]
+    subgraph railway["RAILWAY - reported hosting target; configuration not verified"]
+        runtime["PHP / Laravel application runtime<br/>Exact PHP version and process settings<br/>not verifiable from repository"]
+        webAssets["Served Vite-built frontend assets"]
+    end
+    mysql[("MySQL production database<br/>Production use reported in project brief;<br/>live connection unverified")]
+    brevo["Brevo<br/>Transactional password-reset email"]
+
+    developer --> source
+    source --> git --> github
+    assets -.->|"Build artifact inclusion must be verified"| github
+    github -.-> deployment -.-> railway
+    railway --> runtime
+    runtime --> webAssets
+    runtime <-->|"Configured database connection"| mysql
+    runtime -->|"Password-reset email only"| brevo
+
+    classDef clientStyle fill:#dbeafe,stroke:#2563eb,color:#172554,stroke-width:1.5px
+    classDef appStyle fill:#dcfce7,stroke:#16a34a,color:#14532d,stroke-width:1.5px
+    classDef dataStyle fill:#f3e8ff,stroke:#7e22ce,color:#3b0764,stroke-width:1.5px
+    classDef externalStyle fill:#ffedd5,stroke:#c2410c,color:#7c2d12,stroke-width:1.5px
+    classDef neutralStyle fill:#f1f5f9,stroke:#64748b,color:#1e293b
+    classDef unverifiedStyle fill:#fef3c7,stroke:#d97706,color:#78350f,stroke-dasharray:5 5
+
+    class developer clientStyle
+    class source,composer,npm,vite,assets,git,runtime,webAssets appStyle
+    class sqlite,mysql dataStyle
+    class brevo externalStyle
+    class github neutralStyle
+    class deployment unverifiedStyle
+
+    style local fill:#f8fafc,stroke:#64748b,stroke-width:2px
+    style railway fill:#f0fdf4,stroke:#16a34a,stroke-width:2px,stroke-dasharray:5 5

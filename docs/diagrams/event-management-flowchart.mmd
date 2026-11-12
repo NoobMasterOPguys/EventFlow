@@ -1,0 +1,67 @@
+---
+title: EventFlow - Event Management Workflow
+config:
+  theme: base
+  themeVariables:
+    fontFamily: Arial, sans-serif
+    primaryTextColor: "#111827"
+    lineColor: "#475569"
+---
+flowchart TD
+    start([Start])
+    signedIn["Authenticated user<br/>passes active-account middleware"]
+    createEvent[/Choose Create Event/]
+    form["Show event form<br/>Active categories are selectable"]
+    details[/Enter title, description, category,<br/>location, start, end, and status/]
+    validate["Validate fields, category, and schedule<br/>End must follow start; changed schedule<br/>must be in the future"]
+    valid{"Validation passes?"}
+    errors[/Return field errors and form/]
+    transaction["Create event in a transaction<br/>Set creator and attach creator<br/>as event leader"]
+    persistence[("Persist event and event_members")]
+    audit["Record event.created audit entry"]
+    workspace[/Redirect to event workspace/]
+    viewEvent[/Open an event/]
+    member{"User is an event member?"}
+    denied[/Return not found or denied response/]
+    editCheck{"User is event leader?"}
+    memberManage["Leader may update event details/status,<br/>add or remove members, and manage tasks"]
+    saveUpdate["Validate and save changes<br/>Write audit entry"]
+    notify["Notify other members for event updates<br/>when their event_updates preference is enabled"]
+    membership["Add a unique event_members row<br/>with role member"]
+    memberNotice["Notify new member if preference allows"]
+    removeMember["Remove member membership<br/>and unassign their event tasks"]
+    archiveDecision{"Archive event?"}
+    softDelete["Soft-delete event<br/>Preserve event history"]
+    adminRestore["Administrator with events.update<br/>may restore an archived event"]
+    databaseState[("Database persistence")]
+    finish([End])
+
+    start --> signedIn --> createEvent --> form --> details --> validate --> valid
+    valid -- No --> errors --> form
+    valid -- Yes --> transaction --> persistence --> audit --> workspace
+    workspace --> viewEvent --> member
+    member -- No --> denied --> finish
+    member -- Yes --> editCheck
+    editCheck -- No --> viewEvent
+    editCheck -- Yes --> memberManage
+    memberManage --> saveUpdate --> databaseState
+    saveUpdate --> notify --> viewEvent
+    memberManage --> membership --> persistence
+    membership --> memberNotice --> viewEvent
+    memberManage --> removeMember --> persistence
+    memberManage --> archiveDecision
+    archiveDecision -- No --> viewEvent
+    archiveDecision -- Yes --> softDelete --> databaseState --> adminRestore --> finish
+
+    classDef clientStyle fill:#dbeafe,stroke:#2563eb,color:#172554
+    classDef processStyle fill:#dcfce7,stroke:#16a34a,color:#14532d
+    classDef decisionStyle fill:#fef3c7,stroke:#d97706,color:#78350f
+    classDef ioStyle fill:#e0f2fe,stroke:#0284c7,color:#0c4a6e
+    classDef dataStyle fill:#f3e8ff,stroke:#7e22ce,color:#3b0764
+    classDef endStyle fill:#f1f5f9,stroke:#64748b,color:#1e293b
+
+    class createEvent,details,errors,workspace,viewEvent,denied ioStyle
+    class signedIn,form,validate,transaction,audit,memberManage,saveUpdate,notify,membership,memberNotice,removeMember,softDelete,adminRestore processStyle
+    class valid,member,editCheck,archiveDecision decisionStyle
+    class persistence,databaseState dataStyle
+    class start,finish endStyle

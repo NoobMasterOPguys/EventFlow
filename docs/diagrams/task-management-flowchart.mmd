@@ -1,0 +1,87 @@
+---
+title: EventFlow - Task Management Workflow
+config:
+  theme: base
+  themeVariables:
+    fontFamily: Arial, sans-serif
+    primaryTextColor: "#111827"
+    lineColor: "#475569"
+---
+flowchart TD
+    start([Start])
+    scheduler([Laravel scheduler<br/>runs deadline command every minute])
+    event["Open an event workspace"]
+    member{"Request user is an event member?"}
+    leader{"Event leader?"}
+    create[/Leader enters task details,<br/>optional member assignee, deadline,<br/>priority, and status/]
+    validate["Validate task fields and status<br/>Assignee must belong to this event<br/>New deadline must be in the future"]
+    valid{"Validation passes?"}
+    errors[/Show field errors/]
+    persist[("Create task linked to event<br/>and record creator / optional assignee")]
+    audit["Record task.created audit entry"]
+    assigned{"Task assigned and<br/>assignment notices enabled?"}
+    assignmentNotice["Create database notification"]
+    taskList[/View event task list/]
+    update[/Submit a task update/]
+    canUpdate{"Leader or current assignee?"}
+    denied[/Reject update/]
+    changeKind{"Leader editing task details?"}
+    leaderEdit["Leader may edit task data,<br/>assignee, deadline, and status"]
+    statusOnly["Leader or assigned member changes status only"]
+    save["Save task; log task update/status change"]
+    statusChanged{"Status changed?"}
+    statusNotice{"Assignee status notices enabled?"}
+    notifyStatus["Create database notification"]
+    progress["Recompute event progress from task statuses<br/>Completed-task count / total tasks"]
+    complete{"Status is completed?"}
+    done([Task complete])
+    reminder["Every-minute scheduled command checks<br/>eligible upcoming task deadlines"]
+    reminderPreference{"Assignee active and<br/>deadline reminders enabled?"}
+    reminderNotice["Create deadline reminder notification"]
+    archive{"Leader archives task?"}
+    softDelete["Soft-delete task; preserve history"]
+    database[("tasks<br/>event_id is required<br/>assigned_to is nullable;<br/>composite FK enforces event membership")]
+    finish([End])
+
+    start --> event --> member
+    member -- No --> denied
+    member -- Yes --> leader
+    leader -- Yes --> create --> validate --> valid
+    valid -- No --> errors --> create
+    valid -- Yes --> persist --> database --> audit --> assigned
+    assigned -- Yes --> assignmentNotice --> taskList
+    assigned -- No --> taskList
+    leader -- No --> taskList
+    taskList --> update --> canUpdate
+    canUpdate -- No --> denied --> finish
+    canUpdate -- Yes --> changeKind
+    changeKind -- Yes --> leaderEdit --> save
+    changeKind -- No --> statusOnly --> save
+    save --> database
+    save --> statusChanged
+    statusChanged -- Yes --> statusNotice
+    statusNotice -- Yes --> notifyStatus --> progress
+    statusNotice -- No --> progress
+    statusChanged -- No --> progress
+    progress --> complete
+    complete -- Yes --> done --> finish
+    complete -- No --> archive
+    archive -- Yes --> softDelete --> database --> finish
+    archive -- No --> finish
+    scheduler --> reminder --> reminderPreference
+    reminderPreference -- Yes --> reminderNotice --> finish
+    reminderPreference -- No --> finish
+
+    classDef clientStyle fill:#dbeafe,stroke:#2563eb,color:#172554
+    classDef processStyle fill:#dcfce7,stroke:#16a34a,color:#14532d
+    classDef decisionStyle fill:#fef3c7,stroke:#d97706,color:#78350f
+    classDef ioStyle fill:#e0f2fe,stroke:#0284c7,color:#0c4a6e
+    classDef dataStyle fill:#f3e8ff,stroke:#7e22ce,color:#3b0764
+    classDef endStyle fill:#f1f5f9,stroke:#64748b,color:#1e293b
+    classDef errorStyle fill:#fee2e2,stroke:#dc2626,color:#7f1d1d
+
+    class create,errors,update,taskList,denied ioStyle
+    class event,validate,audit,assignmentNotice,leaderEdit,statusOnly,save,notifyStatus,progress,reminder,reminderNotice,softDelete processStyle
+    class member,leader,valid,assigned,canUpdate,changeKind,statusChanged,statusNotice,complete,archive,reminderPreference decisionStyle
+    class persist,database dataStyle
+    class start,scheduler,done,finish endStyle

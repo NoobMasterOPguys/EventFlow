@@ -1,0 +1,54 @@
+---
+title: EventFlow - Overall System Architecture
+config:
+  theme: base
+  themeVariables:
+    fontFamily: Arial, sans-serif
+    primaryTextColor: "#111827"
+    lineColor: "#475569"
+---
+flowchart LR
+    subgraph client["CLIENT - Browser"]
+        user([Ordinary user or administrator])
+        browser["Browser interface<br/>HTML, Tailwind CSS 4, vanilla JavaScript<br/>Blade-rendered pages and Vite assets"]
+    end
+
+    subgraph host["APPLICATION HOST - Railway target reported; deployment configuration unverified"]
+        http["HTTPS request / response"]
+        routing["Laravel web routes<br/>routes/web.php"]
+        middleware["Web middleware<br/>session, auth, active account,<br/>administrator, permission gates"]
+        controllers["Controllers"]
+        models["Eloquent models<br/>and authorization policies"]
+        blade["Blade templates"]
+        assets["Vite-built frontend assets<br/>public/build"]
+
+        routing --> middleware --> controllers --> models
+        controllers --> blade --> http
+        assets --> http
+    end
+
+    database[("Relational database<br/>MySQL production target reported<br/>SQLite supported and used by default locally/tests<br/>Live production connection unverified")]
+    brevo["Brevo transactional email<br/>Password-reset messages"]
+    legend["Color key<br/>Blue: client | Green: Laravel<br/>Purple: database | Orange: external service"]
+
+    user --> browser
+    browser -->|"HTTPS request"| http
+    http --> routing
+    models <-->|"Eloquent queries / results"| database
+    controllers -->|"Password-reset email only"| brevo
+    http -->|"HTML, CSS, JavaScript, and assets"| browser
+
+    classDef clientStyle fill:#dbeafe,stroke:#2563eb,color:#172554,stroke-width:1.5px
+    classDef appStyle fill:#dcfce7,stroke:#16a34a,color:#14532d,stroke-width:1.5px
+    classDef dataStyle fill:#f3e8ff,stroke:#7e22ce,color:#3b0764,stroke-width:1.5px
+    classDef externalStyle fill:#ffedd5,stroke:#c2410c,color:#7c2d12,stroke-width:1.5px
+    classDef neutralStyle fill:#f1f5f9,stroke:#64748b,color:#1e293b
+
+    class user,browser clientStyle
+    class http,routing,middleware,controllers,models,blade,assets appStyle
+    class database dataStyle
+    class brevo externalStyle
+    class legend neutralStyle
+
+    style client fill:#eff6ff,stroke:#2563eb,stroke-width:2px
+    style host fill:#f0fdf4,stroke:#16a34a,stroke-width:2px,stroke-dasharray:5 5

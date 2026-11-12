@@ -1,0 +1,220 @@
+---
+title: EventFlow - Database Entity Relationship Diagram
+config:
+  theme: base
+  themeVariables:
+    fontFamily: Arial, sans-serif
+    primaryTextColor: "#111827"
+    lineColor: "#6b7280"
+    er.entityBkgColor: "#f3e8ff"
+    er.entityBorderColor: "#7e22ce"
+    er.attributeBackgroundColorOdd: "#faf5ff"
+    er.attributeBackgroundColorEven: "#ffffff"
+    er.relationshipLabelColor: "#334155"
+---
+erDiagram
+    USERS {
+        bigint id PK
+        string name
+        string email UK
+        timestamp email_verified_at
+        string password
+        string remember_token
+        string system_role
+        string account_status
+        boolean is_super_admin
+        json admin_permissions
+        json notification_preferences
+        timestamp suspended_at
+        text suspension_reason
+        bigint suspended_by FK
+        timestamp last_login_at
+        timestamp last_activity_at
+        timestamp deleted_at
+        timestamp created_at
+        timestamp updated_at
+    }
+
+    EVENTS {
+        bigint id PK
+        bigint created_by FK
+        string title
+        text description
+        string category
+        string location
+        datetime start_at
+        datetime end_at
+        enum status
+        timestamp deleted_at
+        timestamp created_at
+        timestamp updated_at
+    }
+
+    EVENT_MEMBERS {
+        bigint id PK
+        bigint event_id FK
+        bigint user_id FK
+        enum role
+        timestamp joined_at
+        timestamp created_at
+        timestamp updated_at
+    }
+
+    TASKS {
+        bigint id PK
+        bigint event_id FK
+        bigint assigned_to FK
+        bigint created_by FK
+        string title
+        text description
+        datetime due_at
+        enum priority
+        enum status
+        timestamp deleted_at
+        timestamp created_at
+        timestamp updated_at
+    }
+
+    EVENT_CATEGORIES {
+        bigint id PK
+        string name UK
+        text description
+        string color
+        string icon
+        boolean is_active
+        timestamp created_at
+        timestamp updated_at
+    }
+
+    ANNOUNCEMENTS {
+        bigint id PK
+        bigint created_by FK
+        string title
+        text body
+        string status
+        timestamp scheduled_at
+        timestamp published_at
+        integer recipients_count
+        timestamp created_at
+        timestamp updated_at
+    }
+
+    SYSTEM_SETTINGS {
+        bigint id PK
+        string key UK
+        json value
+        bigint updated_by FK
+        timestamp created_at
+        timestamp updated_at
+    }
+
+    AUDIT_LOGS {
+        bigint id PK
+        bigint actor_id FK
+        string action
+        string auditable_type
+        bigint auditable_id
+        json metadata
+        string ip_address
+        timestamp created_at
+        timestamp updated_at
+    }
+
+    NOTIFICATIONS {
+        uuid id PK
+        string type
+        string notifiable_type
+        bigint notifiable_id
+        text data
+        timestamp read_at
+        timestamp created_at
+        timestamp updated_at
+    }
+
+    PASSWORD_RESET_TOKENS {
+        string email PK
+        string token
+        timestamp created_at
+    }
+
+    SESSIONS {
+        string id PK
+        bigint user_id
+        string ip_address
+        text user_agent
+        longtext payload
+        integer last_activity
+    }
+
+    CACHE {
+        string key PK
+        mediumtext value
+        bigint expiration
+    }
+
+    CACHE_LOCKS {
+        string key PK
+        string owner
+        bigint expiration
+    }
+
+    JOBS {
+        bigint id PK
+        string queue
+        longtext payload
+        smallint attempts
+        integer reserved_at
+        integer available_at
+        integer created_at
+    }
+
+    JOB_BATCHES {
+        string id PK
+        string name
+        integer total_jobs
+        integer pending_jobs
+        integer failed_jobs
+        text failed_job_ids
+        mediumtext options
+        integer cancelled_at
+        integer created_at
+        integer finished_at
+    }
+
+    FAILED_JOBS {
+        bigint id PK
+        string uuid UK
+        string connection
+        string queue
+        longtext payload
+        longtext exception
+        timestamp failed_at
+    }
+
+    USERS ||--o{ EVENTS : creates
+    USERS ||--o{ EVENT_MEMBERS : joins
+    EVENTS ||--o{ EVENT_MEMBERS : has_members
+    EVENTS ||--o{ TASKS : contains
+    USERS ||--o{ TASKS : creates
+    USERS o|--o{ TASKS : "assignee ORM relation"
+    EVENT_MEMBERS o|--o{ TASKS : "composite assignment FK"
+    EVENT_CATEGORIES o|--o{ EVENTS : "name/category logical relation"
+    USERS ||--o{ ANNOUNCEMENTS : creates
+    USERS o|--o{ SYSTEM_SETTINGS : updates
+    USERS o|--o{ AUDIT_LOGS : acts
+    USERS o|--o{ USERS : suspends
+
+%% Constraints and interpretation:
+%% - EVENT_MEMBERS has a unique constraint on (event_id, user_id).
+%% - TASKS has a composite FK (event_id, assigned_to) to EVENT_MEMBERS(event_id, user_id);
+%%   assigned_to may be null. The ORM also exposes the assignee as a User.
+%% - EVENT_CATEGORIES.name is unique, but EVENTS.category is a nullable string without an FK.
+%% - EVENTS.created_by, TASKS.event_id, TASKS.created_by, EVENT_MEMBERS.user_id, and
+%%   ANNOUNCEMENTS.created_by use restrictive deletes; EVENT_MEMBERS.event_id cascades.
+%% - USERS.suspended_by, SYSTEM_SETTINGS.updated_by, and AUDIT_LOGS.actor_id are nullable
+%%   user FKs with null-on-delete behavior.
+%% - AUDIT_LOGS.auditable_type/auditable_id and NOTIFICATIONS.notifiable_type/notifiable_id
+%%   are polymorphic pairs without database foreign keys; no relation is drawn for them.
+%% - SESSIONS.user_id is nullable and indexed but has no FK constraint.
+%% - The Google Calendar mapping table and token columns were removed by a later migration.
+%% - Supporting cache, session, password reset, and queue tables are Laravel infrastructure.
